@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Chase (Βυζαντινή Έκδοση)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #38006b; /* Imperial Purple */
+            color: #ffffff;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Main content flex-grow to push footer down */
+        .main-content {
+            flex-grow: 1;
+        }
+
+        /* --- Animations --- */
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px #c62828; }
+            50% { transform: scale(1.05); box-shadow: 0 0 25px #c62828; }
+        }
+        .pulse-red { animation: pulse-red 1.5s infinite; }
+
+        @keyframes pulse-blue {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px #1565c0; }
+            50% { transform: scale(1.05); box-shadow: 0 0 25px #1565c0; }
+        }
+        .pulse-blue { animation: pulse-blue 1.5s infinite; }
+        
+        @keyframes flash-green {
+            0%, 100% { background-color: #22c55e; transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .flash-green { animation: flash-green 0.5s ease; }
+
+        @keyframes flash-red {
+            0%, 100% { background-color: #ef4444; transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .flash-red { animation: flash-red 0.5s ease; }
+
+        /* --- Game Board --- */
+        .game-board {
+            display: grid;
+            grid-template-rows: repeat(5, 1fr); /* CHANGED to 5 */
+            width: 300px;
+            height: 400px; /* Shortened height */
+            background: rgba(0, 0, 0, 0.3);
+            border: 4px solid #ffd700; /* Gold */
+            border-radius: 1rem;
+            margin-top: 1rem;
+            position: relative;
+        }
+        .board-step {
+            border-bottom: 2px dashed #ffd700; /* Gold */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #fffde7; /* Cream */
+            position: relative;
+        }
+        .board-step:last-child {
+            border-bottom: none;
+            background-color: #16a34a; /* Green "Home" */
+            border-bottom-left-radius: 0.8rem;
+            border-bottom-right-radius: 0.8rem;
+        }
+        .board-step:first-child {
+            border-top-left-radius: 0.8rem;
+            border-top-right-radius: 0.8rem;
+        }
+        
+        /* --- Player Icons --- */
+        .player-icon, .chaser-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: transform 0.5s ease-in-out;
+            z-index: 10;
+        }
+        .player-icon {
+            background-color: #1565c0; /* Royal Blue */
+            border: 3px solid #fffde7; /* Cream */
+            left: 20%;
+        }
+        .chaser-icon {
+            background-color: #c62828; /* Imperial Red */
+            border: 3px solid #ffcdd2; /* Light Red */
+            right: 20%;
+        }
+        
+        /* --- Custom Message Box --- */
+        #message-box {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+
+    <div class="w-full max-w-4xl mx-auto text-center px-4 main-content">
+
+        <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-4" style="text-shadow: 0 0 15px #ffd700;">
+            THE CHASE
+        </h1>
+        <p class="text-lg text-yellow-300 mb-6">Ενότητα: Εικονομαχία</p>
+
+        <div class="bg-black bg-opacity-30 p-4 rounded-xl shadow-lg mb-6">
+            <h2 class="text-xl font-bold text-yellow-300 mb-3">ΤΕΛΙΚΗ ΚΑΤΑΤΑΞΗ</h2>
+            <div class="flex flex-wrap justify-center gap-4">
+                <div id="team-score-1" class="p-3 bg-gray-700 rounded-lg shadow-md min-w-[100px]">Ομάδα 1: <span class="font-bold text-lg text-yellow-300" id="team-1-score">0</span></div>
+                <div id="team-score-2" class="p-3 bg-gray-700 rounded-lg shadow-md min-w-[100px]">Ομάδα 2: <span class="font-bold text-lg text-yellow-300" id="team-2-score">0</span></div>
+                <div id="team-score-3" class="p-3 bg-gray-700 rounded-lg shadow-md min-w-[100px]">Ομάδα 3: <span class="font-bold text-lg text-yellow-300" id="team-3-score">0</span></div>
+                <div id="team-score-4" class="p-3 bg-gray-700 rounded-lg shadow-md min-w-[100px]">Ομάδα 4: <span class="font-bold text-lg text-yellow-300" id="team-4-score">0</span></div>
+                <div id="team-score-5" class="p-3 bg-gray-700 rounded-lg shadow-md min-w-[100px]">Ομάδα 5: <span class="font-bold text-lg text-yellow-300" id="team-5-score">0</span></div>
+            </div>
+            <button id="start-final-chase-btn" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-all shadow-lg">
+                ΕΝΑΡΞΗ ΤΕΛΙΚΗΣ ΚΑΤΑΔΙΩΞΗΣ
+            </button>
+        </div>
+        
+        <div id="game-screens-container" class="bg-gray-800 bg-opacity-70 p-6 rounded-2xl shadow-xl backdrop-blur-sm min-h-[400px] mb-8">
+
+            <div id="setup-screen">
+                <h2 class="text-2xl font-bold mb-4 text-yellow-300">Έναρξη Παιχνιδιού</h2>
+                <p class="text-lg mb-6">Ποια ομάδα παίζει τώρα;</p>
+                <div id="team-selection" class="flex flex-wrap justify-center gap-4 mb-6">
+                    <button class="team-select-btn p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-bold w-32 transition-all" data-team="0">Ομάδα 1</button>
+                    <button class="team-select-btn p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-bold w-32 transition-all" data-team="1">Ομάδα 2</button>
+                    <button class="team-select-btn p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-bold w-32 transition-all" data-team="2">Ομάδα 3</button>
+                    <button class="team-select-btn p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-bold w-32 transition-all" data-team="3">Ομάδα 4</button>
+                    <button class="team-select-btn p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-bold w-32 transition-all" data-team="4">Ομάδα 5</button>
+                </div>
+                <button id="start-round-1-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all shadow-lg opacity-50" disabled>
+                    Γύρος 1: Συλλογή Χρημάτων
+                </button>
+            </div>
+
+            <div id="cash-builder-screen" class="hidden">
+                <h2 class="text-2xl font-bold text-yellow-300 mb-2">Γύρος 1: Συλλογή Χρημάτων</h2>
+                <h3 class="text-xl mb-4" id="r1-team-name">Η Ομάδα 1 παίζει!</h3>
+                <div class="flex justify-around items-center mb-6">
+                    <div class="text-3xl font-bold">Χρόνος: <span id="r1-timer" class="text-red-400">10</span>s</div>
+                    <div class="text-3xl font-bold">Κέρδη: <span id="r1-bank" class="text-green-400">0</span></div>
+                </div>
+                <button id="r1-start-timer-btn" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all shadow-lg mb-6">
+                    ΕΝΑΡΞΗ ΧΡΟΝΟΜΕΤΡΟΥ
+                </button>
+                
+                <div id="r1-question-area" class="hidden">
+                    <div class="bg-black bg-opacity-20 p-6 rounded-lg mb-4 min-h-[100px] flex items-center justify-center">
+                        <h2 id="r1-question-text" class="text-2xl font-semibold">Η ερώτηση θα εμφανιστεί εδώ.</h2>
+                    </div>
+                    <div id="r1-answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                </div>
+            </div>
+
+            <div id="offer-screen" class="hidden">
+                <h2 class="text-2xl font-bold text-yellow-300 mb-4">Ο Γύρος 1 Τελείωσε!</h2>
+                <p class="text-2xl mb-6">
+                    <span id="offer-team-name">Ομάδα 1</span>, μαζέψατε: 
+                    <span id="offer-bank-amount" class="text-green-400 font-bold text-3xl">0</span>
+                </p>
+                <p class="text-lg mb-8">Τώρα, αντιμετωπίζετε... ΤΟΝ CHASER.</p>
+                
+                <button id="start-round-2-btn" class="bg-red-800 hover:bg-red-900 text-white font-black py-4 px-8 rounded-lg text-2xl transition-all shadow-lg pulse-red">
+                    ΕΝΑΡΞΗ ΚΑΤΑΔΙΩΞΗΣ!
+                </button>
+            </div>
+
+            <div id="head-to-head-screen" class="hidden">
+                <h2 class="text-2xl font-bold text-yellow-300 mb-2">Γύρος 2: Ένας εναντίον Ενός</h2>
+                
+                <div class="flex flex-col md:flex-row justify-center items-center md:items-start gap-8">
+                    <div class="mt-6">
+                        <div class="bg-blue-800 text-white p-4 rounded-lg shadow-lg mb-4 text-left">
+                            <h3 class="text-lg font-bold mb-2">ΟΜΑΔΑ: <span id="r2-team-money">0</span></h3>
+                            <p class="text-xl font-bold">Σωστές: <span id="r2-team-score" class="text-green-300">0</span> / 3</p>
+                        </div>
+                        <div class="bg-red-800 text-white p-4 rounded-lg shadow-lg text-left">
+                            <h3 class="text-lg font-bold mb-2">CHASER</h3>
+                            <p class="text-xl font-bold">Βήματα: <span id="r2-chaser-score" class="text-red-300">0</span> / 3</p>
+                        </div>
+                    </div>
+                    
+                    <div class="game-board">
+                        <div class="player-icon pulse-blue" id="player-icon">BANK</div>
+                        <div class="chaser-icon pulse-red" id="chaser-icon">CHASER</div>
+                        
+                        <div class="board-step"></div> <div class="board-step"></div> <div class="board-step"></div> <div class="board-step"></div> <div class="board-step">HOME</div> </div>
+                </div>
+
+                <div id="r2-question-area" class="mt-6">
+                    <div class="bg-black bg-opacity-20 p-6 rounded-lg mb-4 min-h-[100px] flex items-center justify-center">
+                        <h2 id="r2-question-text" class="text-2xl font-semibold">Ερώτηση...</h2>
+                    </div>
+                    <div id="r2-answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                </div>
+            </div>
+            
+            <div id="final-chase-team-screen" class="hidden">
+                <h2 class="text-3xl font-bold text-yellow-300 mb-2">Τελική Καταδίωξη: Ομάδες</h2>
+                <p class="text-xl mb-4">Παίζουν: <span id="final-teams-list" class="font-bold text-yellow-300"></span></p>
+                
+                <div class="flex flex-wrap justify-around items-center my-6 bg-black bg-opacity-20 p-6 rounded-lg gap-4">
+                    <div class="text-3xl font-bold">Χρόνος: <span id="final-team-timer" class="text-red-400">15</span>s</div>
+                    <div class="text-3xl font-bold">Σκορ: <span id="final-team-score" class="text-green-400">0</span></div>
+                    <div class="text-3xl font-bold">Κέρδη: <span id="final-pot" class="text-yellow-300">0</span></div>
+                </div>
+                
+                <button id="final-team-start-btn" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all shadow-lg mb-6">
+                    ΕΝΑΡΞΗ ΧΡΟΝΟΥ!
+                </button>
+
+                <div id="final-team-question-area" class="hidden">
+                    <div class="bg-black bg-opacity-20 p-6 rounded-lg mb-4 min-h-[100px] flex items-center justify-center">
+                        <h2 id="final-team-question-text" class="text-2xl font-semibold">Ερώτηση...</h2>
+                    </div>
+                    <div id="final-team-answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        </div>
+                </div>
+            </div>
+            
+            <div id="final-chase-chaser-screen" class="hidden">
+                <h2 class="text-3xl font-bold text-yellow-300 mb-2">Τελική Καταδίωξη: Chaser</h2>
+                <p class="text-xl mb-4">Ο Chaser πρέπει να πιάσει τις ομάδες!</p>
+                
+                <div class="flex flex-wrap justify-around items-center my-6 bg-black bg-opacity-20 p-6 rounded-lg gap-4">
+                    <div class="text-3xl font-bold">Χρόνος: <span id="final-chaser-timer" class="text-red-400">15</span>s</div>
+                    <div class="text-3xl font-bold">Στόχος Ομάδων: <span id="final-chaser-team-target" class="text-green-400">0</span></div>
+                    <div class="text-3xl font-bold">Σκορ Chaser: <span id="final-chaser-score" class="text-red-400">0</span></div>
+                </div>
+
+                <div id="final-chaser-question-area" class="hidden bg-black bg-opacity-20 p-6 rounded-lg mb-6 min-h-[100px] flex items-center justify-center">
+                    <h2 id="final-chaser-question-text" class="text-2xl font-semibold">Ερώτηση...</h2>
+                </div>
+                
+                <button id="final-chaser-start-btn" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all shadow-lg mb-6">
+                    ΕΝΑΡΞΗ CHASER
+                </button>
+                
+                <div id="teacher-controls" class="hidden mt-6">
+                    <h3 class="text-lg text-yellow-300 mb-4">(Teacher: Ο Chaser απαντά προφορικά)</h3>
+                    <div id="teacher-main-controls" class="flex justify-center gap-6">
+                        <button id="chaser-correct-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all">
+                            Chaser ΣΩΣΤΑ
+                        </button>
+                        <button id="chaser-incorrect-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all">
+                            Chaser ΛΑΘΟΣ
+                        </button>
+                    </div>
+                    
+                    <div id="teacher-pushback-controls" class="hidden mt-4">
+                        <h3 class="text-lg text-yellow-300 mb-4">ΕΥΚΑΙΡΙΑ PUSHBACK! (Η ομάδα απαντά προφορικά)</h3>
+                        <div class="flex justify-center gap-6">
+                            <button id="pushback-correct-btn" class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg transition-all shadow-lg">
+                                Ομάδα Σωστά (Pushback!)
+                            </button>
+                             <button id="pushback-incorrect-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-all shadow-lg">
+                                Ομάδα Λάθος (Συνέχεια)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="end-screen" class="hidden">
+                <h2 id="end-title" class="text-5xl font-extrabold text-yellow-300 mb-6"></h2>
+                <p id="end-message" class="text-2xl mb-8"></p>
+                <button id="play-again-btn" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-6 rounded-lg text-xl transition-all shadow-lg">
+                    Παίξτε Ξανά
+                </button>
+            </div>
+
+        </div> </div> <audio id="chaser-music" src="The Chase (Enter The Chaser).mp3"></audio>
+
+
+    <div id="message-box" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 opacity-0 -translate-y-10">
+        <div class="bg-white text-gray-900 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <h3 id="message-title" class="text-2xl font-bold mb-4">Μήνυμα</h3>
+            <p id="message-text" class="text-lg mb-6">Αυτό είναι το μήνυμα.</p>
+            <button id="message-ok-btn" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 px-6 rounded-lg">
+                OK
+            </button>
+        </div>
+    </div>
+    
+    <footer class="text-center text-sm text-gray-400 mt-auto py-4 px-4">
+        ✨✍️ Δημιουργία: Παναγιώτης Δόμβρος, Εκπαιδευτικός Αγγλικών-Θεατρολόγος, Με την Επιφύλαξη Παντός Δικαιώματος ✍️✨
+    </footer>
+
+
+    <script>
+        // --- Question Database (Βυζαντινή Ιστορία: Εικονομαχία) ---
+        // All questions based on the provided PDF
+        
+        function makeQ(q, correct, wrong1, wrong2) {
+            return { q, a: [{ t: correct, c: true }, { t: wrong1, c: false }, { t: wrong2, c: false }] };
+        }
+
+        const questionBank = [
+            makeQ("Πώς ονομάστηκε η διαμάχη για τη λατρεία των εικόνων (8ος-9ος αι.);", "Εικονομαχία", "Εικονολατρία", "Εικονογραφία"),
+            makeQ("Πότε συνέβη η Εικονομαχία;", "Αρχές 8ου - μέσα 9ου αι.", "5ος - 6ος αι.", "10ος - 11ος αι."),
+            makeQ("Ποιοι αυτοκράτορες υπήρξαν πρωτεργάτες της Εικονομαχίας;", "Λέων Γ' & Κωνσταντίνος Ε'", "Ιουστινιανός Α' & Θεοδώρα", "Ηράκλειος & Ιουλιανός"),
+            makeQ("Από πού καταγόταν ο αυτοκράτορας Λέων Γ' ο Ίσαυρος;", "Γερμανίκεια Β. Συρίας", "Κωνσταντινούπολη", "Αθήνα"),
+            makeQ("Από ποιες θρησκείες είχαν επηρεαστεί οι ανεικονικές αντιλήψεις;", "Ιουδαϊκή & Ισλαμική", "Βουδισμός & Ινδουισμός", "Ρωμαϊκός Παγανισμός"),
+            makeQ("Ως τι απέρριπταν οι εικονομάχοι τη λατρεία των εικόνων;", "Εκδήλωση ειδωλολατρική", "Έργο τέχνης", "Θεϊκή εντολή"),
+            makeQ("Σύμφωνα με τους εικονομάχους, αυτοί που προσκυνούν τις εικόνες είναι...;", "Ειδωλολάτρες", "Πιστοί", "Μοναχοί"),
+            makeQ("Πού ήταν ιδιαίτερως διαδεδομένες οι ανεικονικές αντιλήψεις;", "Στους αγρότες της Μ. Ασίας", "Στους εμπόρους της Πόλης", "Στη Δυτική Ευρώπη"),
+            makeQ("Ποιος ήταν ένας άλλος παράγοντας της Εικονομαχίας;", "Περιορισμός επιρροής μοναχών", "Ενίσχυση των μοναστηριών", "Αγάπη για την κλασική τέχνη"),
+            makeQ("Πότε διήρκεσε η πρώτη φάση της Εικονομαχίας;", "726-787", "815-843", "700-750"),
+            makeQ("Ποια πράξη ξεκίνησε την Α' φάση της Εικονομαχίας;", "Απομάκρυνση εικόνας από τη Χαλκή Πύλη", "Η Ζ' Οικουμενική Σύνοδος", "Η Σύνοδος του 843"),
+            makeQ("Πότε δημοσιεύτηκε το πρώτο αυτοκρατορικό διάταγμα κατά των εικόνων;", "Το 730", "Το 726", "Το 787"),
+            makeQ("Πώς ονομάστηκαν οι οπαδοί των εικόνων;", "Εικονόφιλοι (ή Εικονολάτρες)", "Εικονομάχοι", "Ειδωλολάτρες"),
+            makeQ("Ποιος μεγάλος θεολόγος υπερασπίστηκε θεωρητικά τις εικόνες;", "Ιωάννης Δαμασκηνός", "Λέων Γ'", "Κωνσταντίνος Ε'"),
+            makeQ("Επί ποίου αυτοκράτορα κορυφώθηκε η διαμάχη, με τρομοκράτηση των μοναχών;", "Κωνσταντίνου Ε'", "Λέοντος Γ'", "Ειρήνης της Αθηναίας"),
+            makeQ("Ποια Σύνοδος τερμάτισε την πρώτη φάση της Εικονομαχίας;", "Η Ζ' Οικουμενική Σύνοδος (787)", "Η Σύνοδος του 843", "Η Σύνοδος της Χαλκηδόνας"),
+            makeQ("Με πρωτοβουλία ποιας αυτοκράτειρας συγκλήθηκε η Ζ' Οικουμενική Σύνοδος;", "Ειρήνης της Αθηναίας", "Θεοδώρας", "Ζωής"),
+            makeQ("Τι είδους προσκύνηση απονέμεται στις εικόνες, σύμφωνα με τη Ζ' Σύνοδο;", "Τιμητική προσκύνηση", "Λατρεία", "Ειδωλολατρία"),
+            makeQ("Πότε διήρκεσε η δεύτερη φάση της Εικονομαχίας;", "815-843", "726-787", "800-810"),
+            makeQ("Ποιος αυτοκράτορας εγκαινίασε τη δεύτερη φάση;", "Λέων Ε' ο Αρμένιος", "Μιχαήλ Γ'", "Κωνσταντίνος Ε'"),
+            makeQ("Γιατί ο Λέων Ε' κατηγόρησε την εικονολατρία;", "Για τις ήττες των Βυζαντινών", "Για την φτώχεια", "Για την έλλειψη τέχνης"),
+            makeQ("Ποια αυτοκράτειρα τερμάτισε οριστικά την Εικονομαχία;", "Η αυγούστα Θεοδώρα", "Η Ειρήνη η Αθηναία", "Η Άννα Κομνηνή"),
+            makeQ("Πότε έγινε η οριστική αναστήλωση των εικόνων;", "Το 843", "Το 787", "Το 815"),
+            makeQ("Ως νίκη ποιας παράδοσης θεωρείται η ήττα των εικονοκλαστών;", "Της ελληνικής πνευματικής παράδοσης", "Της ασιατικής παράδοσης", "Της ιουδαϊκής παράδοσης"),
+            makeQ("Ποια ήταν μια συνέπεια της Εικονομαχίας στην εξωτερική πολιτική;", "Η Εκκλησία της Ρώμης απομακρύνθηκε", "Η Ρώμη πλησίασε το Βυζάντιο", "Οι Άραβες έγιναν σύμμαχοι"),
+            makeQ("Με τι διακοσμήθηκαν οι εκκλησίες την περίοδο της Εικονομαχίας;", "Με ζώα, φυτά και διακοσμητικά μοτίβα", "Με πορτρέτα αυτοκρατόρων", "Έμειναν εντελώς κενές"),
+            makeQ("Ποιος έγραψε '...πώς να μην προσκυνήσω την εικόνα του Χριστού...';", "Ιωάννης Δαμασκηνός", "Λέων Γ'", "Λέων Ε'"),
+            makeQ("Ποιος υποστήριξε ότι 'ο Θεός απαγορεύει την προσκύνηση' (κατασκευασμάτων);", "Λέων Γ'", "Ιωάννης Δαμασκηνός", "Η Θεοδώρα")
+        ];
+        
+        // Use this bank for all rounds
+        const round1Questions = [...questionBank];
+        const round2Questions = [...questionBank];
+        const finalChaseQuestions = [...questionBank];
+        const finalChaseChaserQuestions = [...questionBank];
+        
+        // --- End of new Question Database ---
+
+
+        // --- Game State Variables ---
+        let teamScores = [0, 0, 0, 0, 0];
+        let teamPlayingStatus = [false, false, false, false, false]; // true if they are in the final
+        let currentActiveTeam = -1; // 0-4
+        let currentCashBuilderBank = 0;
+        let currentRound2TeamScore = 0;
+        let currentRound2ChaserScore = 0;
+        let finalChaseTeamScore = 0;
+        let finalChaseChaserScore = 0;
+        let finalChaseTotalPot = 0;
+        
+        // New question trackers
+        let r1QuestionIndex = 0;
+        let r2QuestionIndex = 0;
+        let r3QuestionIndex = 0; // Renamed to r3TeamQuestionIndex
+        let r3ChaserQuestionIndex = 0; // NEW
+        let shuffledR1Questions = [];
+        let shuffledR2Questions = [];
+        let shuffledR3Questions = []; // Renamed to shuffledR3TeamQuestions
+        let shuffledR3ChaserQuestions = []; // NEW
+
+        let timerId;
+        let timerValue;
+        
+        // --- DOM Elements ---
+        const screens = {
+            setup: document.getElementById('setup-screen'),
+            cashBuilder: document.getElementById('cash-builder-screen'),
+            offer: document.getElementById('offer-screen'),
+            headToHead: document.getElementById('head-to-head-screen'),
+            finalTeam: document.getElementById('final-chase-team-screen'),
+            finalChaser: document.getElementById('final-chase-chaser-screen'),
+            end: document.getElementById('end-screen')
+        };
+        const chaserMusic = document.getElementById('chaser-music');
+        const messageBox = document.getElementById('message-box');
+        const messageTitle = document.getElementById('message-title');
+        const messageText = document.getElementById('message-text');
+        
+        // --- Utility Functions ---
+        
+        /** Shows a specific screen and hides all others */
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+            if (screens[screenId]) {
+                screens[screenId].classList.remove('hidden');
+            }
+        }
+
+        /** Shuffles an array in place */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /** Shows a custom message box */
+        function showMessage(title, text, onOkCallback) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            
+            let oldOkBtn = document.getElementById('message-ok-btn');
+            const newOkBtn = oldOkBtn.cloneNode(true);
+            oldOkBtn.parentNode.replaceChild(newOkBtn, oldOkBtn);
+            
+            newOkBtn.addEventListener('click', () => {
+                messageBox.classList.add('opacity-0', '-translate-y-10');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                    if (onOkCallback) onOkCallback();
+                }, 300);
+            }, { once: true });
+
+            messageBox.classList.remove('hidden');
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-0', '-translate-y-10');
+            }, 10);
+        }
+
+        /** Starts a countdown timer */
+        function startTimer(duration, displayElement, onEndCallback) {
+            clearInterval(timerId);
+            timerValue = duration;
+            displayElement.textContent = timerValue;
+            
+            timerId = setInterval(() => {
+                timerValue--;
+                displayElement.textContent = timerValue;
+                
+                if (timerValue <= 0) {
+                    clearInterval(timerId);
+                    onEndCallback();
+                }
+            }, 1000);
+        }
+
+        /** Loads a question into a specified area */
+        function loadQuestion(qArea, qTextEl, qAnswersEl, roundType) {
+            let q;
+            
+            if (roundType === 'R1') {
+                if (r1QuestionIndex >= shuffledR1Questions.length) {
+                    r1QuestionIndex = 0;
+                    shuffleArray(shuffledR1Questions);
+                    console.log("Shuffling R1 questions");
+                }
+                q = shuffledR1Questions[r1QuestionIndex];
+                r1QuestionIndex++;
+                
+            } else if (roundType === 'R2') {
+                if (r2QuestionIndex >= shuffledR2Questions.length) {
+                    r2QuestionIndex = 0;
+                    shuffleArray(shuffledR2Questions);
+                    console.log("Shuffling R2 questions");
+                }
+                q = shuffledR2Questions[r2QuestionIndex];
+                r2QuestionIndex++;
+                
+            } else if (roundType === 'FinalTeam') {
+                if (r3QuestionIndex >= shuffledR3Questions.length) {
+                    r3QuestionIndex = 0;
+                    shuffleArray(shuffledR3Questions);
+                    console.log("Shuffling R3 questions");
+                }
+                q = shuffledR3Questions[r3QuestionIndex];
+                r3QuestionIndex++;
+            }
+            
+            if (!q) {
+                qTextEl.textContent = "Error: No questions found for this round.";
+                qAnswersEl.innerHTML = '';
+                return;
+            }
+
+            qTextEl.textContent = q.q;
+            qAnswersEl.innerHTML = '';
+            
+            const shuffledAnswers = [...q.a];
+            shuffleArray(shuffledAnswers);
+            
+            shuffledAnswers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer.t;
+                button.className = "w-full p-4 bg-purple-700 hover:bg-purple-800 rounded-lg font-semibold text-lg transition-all transform hover:scale-105";
+                
+                button.addEventListener('click', () => {
+                    qAnswersEl.querySelectorAll('button').forEach(btn => btn.disabled = true);
+                    
+                    button.classList.remove('bg-purple-700', 'hover:bg-purple-800');
+                    if (answer.c) {
+                        button.classList.add('flash-green');
+                    } else {
+                        button.classList.add('flash-red');
+                    }
+                    
+                    setTimeout(() => {
+                        handleAnswer(roundType, answer.c);
+                        button.classList.remove('flash-green', 'flash-red');
+                        button.classList.add('bg-purple-700', 'hover:bg-purple-800');
+                    }, 500);
+                });
+                qAnswersEl.appendChild(button);
+            });
+        }
+
+        /** Updates the main 5-team scoreboard */
+        function updateGlobalScoreboard() {
+            let teamsDone = 0;
+            let canStartFinal = true;
+            
+            for (let i = 0; i < 5; i++) {
+                const scoreEl = document.getElementById(`team-${i+1}-score`);
+                const teamBox = document.getElementById(`team-score-${i+1}`);
+                scoreEl.textContent = teamScores[i];
+                
+                const selectBtn = document.querySelector(`.team-select-btn[data-team="${i}"]`);
+                
+                if (teamScores[i] > 0) {
+                    teamBox.classList.add('bg-green-700');
+                    selectBtn.classList.add('bg-green-700', 'opacity-50');
+                    selectBtn.disabled = true;
+                    teamsDone++;
+                } else if (teamPlayingStatus[i] === false && selectBtn.disabled) {
+                    teamBox.classList.add('bg-red-700');
+                    teamsDone++;
+                } else if (selectBtn.disabled) {
+                    // Team is currently selected
+                } else {
+                    canStartFinal = false;
+                }
+            }
+            
+            if (teamsDone === 5) {
+                document.getElementById('start-final-chase-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('start-final-chase-btn').classList.add('hidden');
+            }
+        }
+
+        /** Handles answer logic for different rounds */
+        function handleAnswer(roundType, isCorrect) {
+            if (roundType === 'R1') {
+                if (isCorrect) {
+                    currentCashBuilderBank += 100;
+                    document.getElementById('r1-bank').textContent = currentCashBuilderBank;
+                }
+                loadQuestion(
+                    'r1-question-area', 
+                    document.getElementById('r1-question-text'), 
+                    document.getElementById('r1-answer-buttons'), 
+                    'R1'
+                );
+            } 
+            else if (roundType === 'R2') {
+                checkRound2Answer(isCorrect);
+            }
+            else if (roundType === 'FinalTeam') {
+                if (isCorrect) {
+                    finalChaseTeamScore++;
+                    document.getElementById('final-team-score').textContent = finalChaseTeamScore;
+                }
+                loadQuestion(
+                    'final-team-question-area', 
+                    document.getElementById('final-team-question-text'), 
+                    document.getElementById('final-team-answer-buttons'), 
+                    'FinalTeam'
+                );
+            }
+        }
+
+        // --- Game Flow Functions ---
+
+        /** SCREEN 1: SETUP */
+        function initializeSetupScreen() {
+            document.querySelectorAll('.team-select-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    currentActiveTeam = parseInt(button.dataset.team);
+                    
+                    document.querySelectorAll('.team-select-btn').forEach(btn => {
+                        btn.classList.remove('ring-4', 'ring-yellow-300');
+                        if (!btn.disabled) {
+                            btn.classList.add('bg-purple-700', 'hover:bg-purple-800');
+                        }
+                    });
+                    button.classList.add('ring-4', 'ring-yellow-300');
+                    
+                    document.getElementById('start-round-1-btn').disabled = false;
+                    document.getElementById('start-round-1-btn').classList.remove('opacity-50');
+                });
+            });
+
+            document.getElementById('start-round-1-btn').addEventListener('click', startRound1);
+            document.getElementById('start-final-chase-btn').addEventListener('click', startFinalChase);
+            document.getElementById('play-again-btn').addEventListener('click', resetGame);
+        }
+
+        /** SCREEN 2: CASH BUILDER (R1) */
+        function startRound1() {
+            if (currentActiveTeam === -1) return;
+            
+            const selectBtn = document.querySelector(`.team-select-btn[data-team="${currentActiveTeam}"]`);
+            selectBtn.disabled = true;
+            selectBtn.classList.add('opacity-50');
+            
+            currentCashBuilderBank = 0;
+            document.getElementById('r1-bank').textContent = '0';
+            document.getElementById('r1-team-name').textContent = `Η Ομάδα ${currentActiveTeam + 1} παίζει!`;
+            
+            document.getElementById('r1-start-timer-btn').classList.remove('hidden');
+            document.getElementById('r1-question-area').classList.add('hidden');
+            
+            showScreen('cashBuilder');
+        }
+        
+        document.getElementById('r1-start-timer-btn').addEventListener('click', () => {
+            document.getElementById('r1-start-timer-btn').classList.add('hidden');
+            document.getElementById('r1-question-area').classList.remove('hidden');
+            
+            startTimer(10, document.getElementById('r1-timer'), endRound1); // CHANGED to 10
+            loadQuestion(
+                'r1-question-area', 
+                document.getElementById('r1-question-text'), 
+                document.getElementById('r1-answer-buttons'), 
+                'R1'
+            );
+        });
+        
+        function endRound1() {
+            clearInterval(timerId);
+            showMessage(
+                'Ο Χρόνος Τελείωσε!',
+                `Η Ομάδα ${currentActiveTeam + 1} μάζεψε ${currentCashBuilderBank}.`,
+                () => {
+                    document.getElementById('offer-team-name').textContent = `Ομάδα ${currentActiveTeam + 1}`;
+                    document.getElementById('offer-bank-amount').textContent = currentCashBuilderBank;
+                    showScreen('offer');
+                }
+            );
+        }
+        
+        /** SCREEN 3: OFFER (Pre-R2) */
+        document.getElementById('start-round-2-btn').addEventListener('click', () => {
+            try {
+                chaserMusic.currentTime = 0;
+                chaserMusic.play();
+            } catch (e) {
+                console.warn("Audio could not play (user interaction may be needed).", e);
+            }
+            startRound2();
+        });
+
+        /** SCREEN 4: HEAD TO HEAD (R2) */
+        function startRound2() {
+            currentRound2TeamScore = 0;
+            currentRound2ChaserScore = 0;
+            document.getElementById('r2-team-money').textContent = currentCashBuilderBank;
+            
+            updateBoardVisuals(1, 0); // Player starts at 1, Chaser at 0 (CHANGED)
+            showScreen('headToHead');
+            loadQuestion(
+                'r2-question-area',
+                document.getElementById('r2-question-text'),
+                document.getElementById('r2-answer-buttons'),
+                'R2'
+            );
+        }
+
+        // NEW R2 LOGIC
+        function checkRound2Answer(isCorrect) {
+            if (isCorrect) {
+                currentRound2TeamScore++;
+            } else {
+                currentRound2ChaserScore++;
+            }
+            
+            let playerBoardPos = 1 + currentRound2TeamScore; // CHANGED
+            let chaserBoardPos = currentRound2ChaserScore;
+
+            updateBoardVisuals(playerBoardPos, chaserBoardPos); // Pass positions
+            
+            if (playerBoardPos >= 4) { // Player wins (needs 3 steps: 1+3=4) (CHANGED)
+                teamScores[currentActiveTeam] = currentCashBuilderBank;
+                teamPlayingStatus[currentActiveTeam] = true;
+                showMessage(
+                    'Νικήσατε!',
+                    `Η Ομάδα ${currentActiveTeam + 1} κέρδισε ${currentCashBuilderBank}!`,
+                    goToSetupScreen
+                );
+            } else if (chaserBoardPos >= playerBoardPos) { // Chaser wins
+                teamPlayingStatus[currentActiveTeam] = false;
+                showMessage(
+                    'Σας Έπιασε!',
+                    `Η Ομάδα ${currentActiveTeam + 1} είναι εκτός!`,
+                    goToSetupScreen
+                );
+            } else { // Continue
+                loadQuestion(
+                    'r2-question-area',
+                    document.getElementById('r2-question-text'),
+                    document.getElementById('r2-answer-buttons'),
+                    'R2'
+                );
+            }
+        }
+        
+        // NEW R2 LOGIC
+        function updateBoardVisuals(playerStep, chaserStep) { // Accept args
+            document.getElementById('r2-team-score').textContent = currentRound2TeamScore; // This is the # of correct answers
+            document.getElementById('r2-chaser-score').textContent = currentRound2ChaserScore; // This is the # of correct answers
+            
+            const stepHeightPercent = 100 / 4; // CHANGED (5 steps, 4 divisions)
+            
+            // playerStep and chaserStep are now the *actual* board positions (0-4)
+            // Clamp values just in case (e.g., playerStep > 4)
+            let playerPos = Math.min(playerStep, 4); // CHANGED
+            let chaserPos = Math.min(chaserStep, 4); // CHANGED
+            
+            document.getElementById('player-icon').style.transform = `translateY(${playerPos * stepHeightPercent}%)`;
+            document.getElementById('chaser-icon').style.transform = `translateY(${chaserPos * stepHeightPercent}%)`;
+        }
+        
+        function goToSetupScreen() {
+            currentActiveTeam = -1;
+            document.getElementById('start-round-1-btn').disabled = true;
+            document.getElementById('start-round-1-btn').classList.add('opacity-50');
+            document.querySelectorAll('.team-select-btn').forEach(btn => {
+                btn.classList.remove('ring-4', 'ring-yellow-300');
+            });
+            
+            updateGlobalScoreboard();
+            showScreen('setup');
+        }
+
+        /** SCREEN 5: FINAL CHASE - TEAM */
+        function startFinalChase() {
+            finalChaseTotalPot = 0;
+            let teamsInFinal = 0;
+            let teamsList = [];
+
+            for(let i=0; i<5; i++) {
+                if(teamPlayingStatus[i] === true) {
+                    finalChaseTotalPot += teamScores[i];
+                    teamsInFinal++;
+                    teamsList.push(`Ομάδα ${i+1}`); // CHANGED
+                }
+            }
+
+            if (teamsInFinal === 0) {
+                showMessage("Δεν Πέρασε Καμία Ομάδα!", "Καμία ομάδα δεν τα κατάφερε. Το παιχνίδι τελείωσε.", resetGame);
+                return;
+            }
+            
+            finalChaseTeamScore = teamsInFinal;
+            
+            document.getElementById('final-teams-list').textContent = teamsList.join(', ');
+            document.getElementById('final-team-score').textContent = finalChaseTeamScore;
+            document.getElementById('final-pot').textContent = finalChaseTotalPot;
+            
+            document.getElementById('final-team-start-btn').classList.remove('hidden');
+            document.getElementById('final-team-question-area').classList.add('hidden');
+            
+            showScreen('finalTeam');
+        }
+
+        document.getElementById('final-team-start-btn').addEventListener('click', () => {
+            document.getElementById('final-team-start-btn').classList.add('hidden');
+            document.getElementById('final-team-question-area').classList.remove('hidden');
+            
+            startTimer(15, document.getElementById('final-team-timer'), endTeamFinalChase); // CHANGED to 15
+            loadQuestion(
+                'final-team-question-area', 
+                document.getElementById('final-team-question-text'), 
+                document.getElementById('final-team-answer-buttons'), 
+                'FinalTeam'
+            );
+        });
+
+        function endTeamFinalChase() {
+            clearInterval(timerId);
+            showMessage(
+                'Ο Χρόνος Τελείωσε!',
+                `Οι ομάδες έθεσαν στόχο ${finalChaseTeamScore}!`,
+                () => {
+                    document.getElementById('final-chaser-team-target').textContent = finalChaseTeamScore;
+                    document.getElementById('final-chaser-score').textContent = '0';
+                    document.getElementById('final-chaser-start-btn').classList.remove('hidden');
+                    document.getElementById('teacher-controls').classList.add('hidden');
+                    document.getElementById('final-chaser-question-area').classList.add('hidden');
+                    showScreen('finalChaser');
+                }
+            );
+        }
+
+        /** SCREEN 6: FINAL CHASE - CHASER */
+        
+        /** function to load just the chaser question text */
+        function loadChaserQuestion() {
+            if (r3ChaserQuestionIndex >= shuffledR3ChaserQuestions.length) {
+                r3ChaserQuestionIndex = 0;
+                shuffleArray(shuffledR3ChaserQuestions);
+                console.log("Shuffling R3 Chaser questions");
+            }
+            const q = shuffledR3ChaserQuestions[r3ChaserQuestionIndex];
+            r3ChaserQuestionIndex++;
+            
+            if (q) {
+                document.getElementById('final-chaser-question-text').textContent = q.q;
+            } else {
+                document.getElementById('final-chaser-question-text').textContent = "Error: No Chaser questions found.";
+            }
+        }
+        
+        /** function to resume timer and reset controls */
+        function resumeChaserTimer() {
+            startTimer(timerValue, document.getElementById('final-chaser-timer'), endChaserFinalChase);
+            document.getElementById('teacher-pushback-controls').classList.add('hidden');
+            document.getElementById('teacher-main-controls').classList.remove('hidden');
+        }
+        
+        document.getElementById('final-chaser-start-btn').addEventListener('click', () => {
+            document.getElementById('final-chaser-start-btn').classList.add('hidden');
+            document.getElementById('teacher-controls').classList.remove('hidden');
+            document.getElementById('teacher-main-controls').classList.remove('hidden');
+            document.getElementById('teacher-pushback-controls').classList.add('hidden');
+            
+            document.getElementById('final-chaser-question-area').classList.remove('hidden');
+            loadChaserQuestion();
+            
+            startTimer(15, document.getElementById('final-chaser-timer'), endChaserFinalChase); // CHANGED to 15
+        });
+        
+        document.getElementById('chaser-correct-btn').addEventListener('click', () => {
+            finalChaseChaserScore++;
+            document.getElementById('final-chaser-score').textContent = finalChaseChaserScore;
+            
+            if (finalChaseChaserScore >= finalChaseTeamScore) {
+                clearInterval(timerId);
+                showEndScreen(false); // Chaser wins
+            } else {
+                loadChaserQuestion();
+            }
+        });
+        
+        document.getElementById('chaser-incorrect-btn').addEventListener('click', () => {
+            clearInterval(timerId);
+            
+            document.getElementById('teacher-pushback-controls').classList.remove('hidden');
+            document.getElementById('teacher-main-controls').classList.add('hidden');
+        });
+
+        document.getElementById('pushback-correct-btn').addEventListener('click', () => {
+            if (finalChaseChaserScore > 0) {
+                finalChaseChaserScore--;
+                document.getElementById('final-chaser-score').textContent = finalChaseChaserScore;
+            }
+            
+            loadChaserQuestion();
+            resumeChaserTimer();
+        });
+        
+        document.getElementById('pushback-incorrect-btn').addEventListener('click', () => {
+            loadChaserQuestion();
+            resumeChaserTimer();
+        });
+
+        function endChaserFinalChase() {
+            clearInterval(timerId);
+            if (finalChaseChaserScore >= finalChaseTeamScore) {
+                showEndScreen(false); // Chaser wins
+            } else {
+                showEndScreen(true); // Teams win
+            }
+        }
+        
+        /** SCREEN 7: END SCREEN */
+        function showEndScreen(teamsWin) {
+            if (teamsWin) {
+                document.getElementById('end-title').textContent = 'ΟΙ ΟΜΑΔΕΣ ΝΙΚΗΣΑΝ!';
+                document.getElementById('end-message').textContent = `Συγχαρητήρια! Νικήσατε τον Chaser και κερδίζετε ${finalChaseTotalPot}!`;
+                document.getElementById('end-title').classList.add('text-green-400');
+                document.getElementById('end-title').classList.remove('text-red-400');
+            } else {
+                document.getElementById('end-title').textContent = 'Ο CHASER ΝΙΚΗΣΕ.';
+                document.getElementById('end-message').textContent = 'Ο Chaser σας έπιασε... φεύγετε με άδεια χέρια.';
+                document.getElementById('end-title').classList.add('text-red-400');
+                document.getElementById('end-title').classList.remove('text-green-400');
+            }
+            showScreen('end');
+        }
+
+        /** GAME RESET */
+        function resetGame() {
+            teamScores = [0, 0, 0, 0, 0];
+            teamPlayingStatus = [false, false, false, false, false];
+            currentActiveTeam = -1;
+            currentCashBuilderBank = 0;
+            currentRound2TeamScore = 0;
+            currentRound2ChaserScore = 0;
+            finalChaseTeamScore = 0;
+            finalChaseChaserScore = 0;
+            finalChaseTotalPot = 0;
+            
+            r1QuestionIndex = 0;
+            r2QuestionIndex = 0;
+            r3QuestionIndex = 0;
+            r3ChaserQuestionIndex = 0;
+            
+            shuffledR1Questions = [...round1Questions];
+            shuffledR2Questions = [...round2Questions];
+            shuffledR3Questions = [...finalChaseQuestions];
+            shuffledR3ChaserQuestions = [...finalChaseChaserQuestions];
+            shuffleArray(shuffledR1Questions);
+            shuffleArray(shuffledR2Questions);
+            shuffleArray(shuffledR3Questions);
+            shuffleArray(shuffledR3ChaserQuestions);
+
+            clearInterval(timerId);
+            
+            for(let i=1; i<=5; i++) {
+                document.getElementById(`team-${i}-score`).textContent = '0';
+                document.getElementById(`team-score-${i}`).classList.remove('bg-green-700', 'bg-red-700');
+                const btn = document.querySelector(`.team-select-btn[data-team="${i-1}"]`);
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'bg-green-700');
+                btn.classList.add('bg-purple-700', 'hover:bg-purple-800');
+            }
+            
+            document.getElementById('start-round-1-btn').disabled = true;
+            document.getElementById('start-round-1-btn').classList.add('opacity-50');
+            document.getElementById('start-final-chase-btn').classList.add('hidden');
+            
+            showScreen('setup');
+        }
+
+
+        // --- Initialize Game ---
+        document.addEventListener('DOMContentLoaded', () => {
+            shuffledR1Questions = [...round1Questions];
+            shuffledR2Questions = [...round2Questions];
+            shuffledR3Questions = [...finalChaseQuestions];
+            shuffledR3ChaserQuestions = [...finalChaseChaserQuestions];
+            shuffleArray(shuffledR1Questions);
+            shuffleArray(shuffledR2Questions);
+            shuffleArray(shuffledR3Questions);
+            shuffleArray(shuffledR3ChaserQuestions);
+            
+            initializeSetupScreen();
+            
+            document.getElementById('message-ok-btn').addEventListener('click', () => {
+                messageBox.classList.add('hidden', 'opacity-0', '-translate-y-10');
+            });
+            
+            showScreen('setup');
+        });
+
+    </script>
+
+</body>
+</html>
